@@ -1,37 +1,102 @@
 import pickle
 import shlex
 import glob
-promotedMusic = None
-try:
-    promotedMusic = pickle.load( open( "promotedMusic.p", "rb" ) )
-except:
-    promotedMusic = set()
+import sys
+from itertools import chain
 
-arr = shlex.split(input())
-while len(arr) != 0:
+music_folder_path = "/home/nelson/Music"
+
+def music_generator(glob_path):
+    absolute_glob_path = f"{music_folder_path}/{glob_path}"
+    for absolute_path in glob.glob(absolute_glob_path, recursive=True):
+        path = absolute_path[len(music_folder_path) + 1:]
+        yield path
+
+promoted_music = None
+
+try:
+    promoted_music = pickle.load( open( "promoted_music.p", "rb" ) )
+except:
+    promoted_music = set()
+
+# print("music$ ", end="")
+for line in sys.stdin:
+    arr = shlex.split(line)
+
+    if len(arr) == 0:
+        continue
+
     mode = arr[0]
+
     if mode == "demote":
-        for path in glob.glob(arr[1]):
-            if path in promotedMusic:
+        if len(arr) < 2:
+            print("\tInvalid command.")
+            continue
+
+        for path in music_generator( arr[1] ):
+            if path in promoted_music:
                 print("\tDemoting '" + path + "' from favorites.")
-            promotedMusic.discard(path)
+            promoted_music.discard(path)
+
+
     elif mode == "promote":
-        for path in glob.glob(arr[1]):
-            if path not in promotedMusic:
+        if len(arr) < 2:
+            print("\tInvalid command.")
+            continue
+        
+        for path in music_generator( arr[1] ):
+            if path not in promoted_music:
                 print("\tPromoting '" + path + "' to favorites.")
-            promotedMusic.add(path)
+            promoted_music.add(path)
+
+
     elif mode == "ls":
-        for path in glob.glob(arr[1]):
-            if path in promotedMusic:
-                print("\tMatched '" + path + "'.")
+        if len(arr) > 1:
+            for path in music_generator( arr[1] ):
+                if path in promoted_music:
+                    print(f"\tMatched '{path}'.")
+        else:
+            for path in promoted_music:
+                print(f"\t{path}")
+
+    
+    elif mode == "diff":
+        
+        if len(arr) > 1:
+            combined_generator = music_generator( arr[1] )
+        else:
+            combined_generator = chain( music_generator("*"), music_generator("**/*") )
+
+        for path in combined_generator:
+            if path in promoted_music:
+                color = "01;32"
+            else:
+                color = "01;31"
+            print(f"\t\x1B[{color}m{path}\x1B[00m")
+    
+
+    elif mode == "commit":
+        pickle.dump( promoted_music, open( "promoted_music.p", "wb" ) )
+        print("\tCommitted.")
+    
+    
     elif mode == "quit" or mode == "q":
         break
+    
+    
     elif mode == "help":
         print("\tUse 'promote [glob]' to promote songs.")
         print("\tUse 'demote [glob]' to demote songs.")
         print("\tUse 'ls [glob]' to see what matching songs are in favorites.")
-        print("\tUse 'quit', 'q', or an empty line of input to commit changes and exit.")
+        print("\tUse 'quit', 'q', or EOF/Ctrl-D to commit changes and exit.")
         print("\tUse 'help' to list commands.")
-    arr = shlex.split(input())
+    
+   
+    else:
+        print("\tInvalid command")
+    # print("music$ ", end="")
+    
+
+
+pickle.dump( promoted_music, open( "promoted_music.p", "wb" ) )
 print("Committed.")
-pickle.dump( promotedMusic, open( "promotedMusic.p", "wb" ) )
