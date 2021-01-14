@@ -4,7 +4,8 @@ import glob
 import sys
 from itertools import chain
 
-music_folder_path = "/home/nelson/Music"
+with open("source") as f:
+    music_folder_path = f.read().strip()
 
 def music_generator(glob_path):
     absolute_glob_path = f"{music_folder_path}/{glob_path}"
@@ -21,7 +22,11 @@ except:
 
 # print("music$ ", end="")
 for line in sys.stdin:
-    arr = shlex.split(line)
+    try:
+        arr = shlex.split(line)
+    except:
+        print("\tMalformed input.")
+        continue
 
     if len(arr) == 0:
         continue
@@ -88,6 +93,7 @@ for line in sys.stdin:
         print("\tUse 'promote [glob]' to promote songs.")
         print("\tUse 'demote [glob]' to demote songs.")
         print("\tUse 'ls [glob]' to see what matching songs are in favorites.")
+        print("\tUse 'diff [glob]' to compare songs in favorites and those in your filesystem.")
         print("\tUse 'quit', 'q', or EOF/Ctrl-D to commit changes and exit.")
         print("\tUse 'help' to list commands.")
     
@@ -99,4 +105,5 @@ for line in sys.stdin:
 
 
 pickle.dump( promoted_music, open( "promoted_music.p", "wb" ) )
+print("")
 print("Committed.")

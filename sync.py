@@ -17,9 +17,12 @@ def mkdir_p(path):
 
 
 promoted_music = pickle.load( open( "promoted_music.p", "rb" ) )
-updated_promoted_music = set(promoted_music)
-destination = input()
 
+with open("source") as f:
+    source = f.read().strip()
+
+with open("destination") as f:
+    destination = f.read().strip()
 
 if len(re.findall("(M|m)usic", destination)) == 0:
     # Caution against performing this action on any very important, non-music folder
@@ -29,26 +32,35 @@ if len(re.findall("(M|m)usic", destination)) == 0:
 if destination[-1] != '/':
     destination += '/'
 
+updated_promoted_music = promoted_music.copy()
 for song in promoted_music: # Remove any possible stragglers
-    if not os.path.exists("./" + song):
-        print("Removing nonexistent song '" + song + "' from list of favorites.")
+    if not os.path.exists(f"{source}/{song}"):
+        print(f"Removing nonexistent song '{song}' from list of favorites.")
         updated_promoted_music.discard(song)
 
-promoted_music = set(updated_promoted_music)
+print("Proceed? (y/n)")
+response = input()
+
+if response.lower() != "y":
+    print("Aborting.")
+    exit()
+
+promoted_music = updated_promoted_music.copy()
 
 for subdir, dirs, files in os.walk(destination):
     for f in files:
         absolute = os.path.join(subdir, f)
         relative = absolute[len(destination):]
         if relative not in promoted_music:
-            print("Removing (probably) demoted song '" + relative + "' from destination.")
+            print(f"Removing (probably) demoted song '{relative}' from destination.")
             os.remove(absolute)
 
 for song in promoted_music:
     abs_dest_path = destination + song
     if not os.path.exists(abs_dest_path):
-        print("Copying new favorite '" + song + "' to destination.")
+        print(f"Copying new favorite '{song}' to destination.")
         mkdir_p(os.path.dirname(abs_dest_path))
-        copyfile("./" + song, abs_dest_path)
+        copyfile(f"{source}/{song}", abs_dest_path)
 
 pickle.dump( promoted_music, open("promoted_music.p", "wb"))
+print("Done.")
